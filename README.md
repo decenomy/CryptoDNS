@@ -48,7 +48,7 @@ $ dotnet publish -c Release
 
 For Windows or other architectures you need to specify the correct RID like described here:
 
-[Publish .NET apps with the .NET CLI](https://docs.microsoft.com/en-us/dotnet/core/deploying/deploy-with-cli)
+[Publish .NET apps with the .NET CLI](https://docs.microsoft.com/en-us/dotnet/core/deploying/deploy-with-cli)  
 [.NET RID Catalog](https://docs.microsoft.com/en-us/dotnet/core/rid-catalog)
 
 example for: (Linux distributions running on ARM like Raspbian on Raspberry Pi Model 2+)
