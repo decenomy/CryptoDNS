@@ -1,2 +1,2 @@
 # CryptoDNS
-Muti-cryptocurrency DNS server
+Multi-cryptocurrency DNS server
