@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace CryptoDNS.Jobs
 {
@@ -23,7 +24,7 @@ namespace CryptoDNS.Jobs
             this.serviceProvider = serviceProvider;
         }
 
-        public void Execute()
+        public async Task Execute()
         {
             logger.LogInformation("DaemonsRecurringJob Executing");
 
@@ -31,7 +32,7 @@ namespace CryptoDNS.Jobs
 
             foreach (var domain in appSettings.Domains)
             {
-                daemonFetchPeersJob.Execute(domain);
+                await daemonFetchPeersJob.Execute(domain);
             }
             logger.LogInformation("DaemonsRecurringJob Executed");
         }

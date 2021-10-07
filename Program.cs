@@ -33,6 +33,7 @@ namespace CryptoDNS
                     services.AddSingleton<IRequestResolver, CryptoRequestResolver>();
                     services.AddSingleton<DomainsRepository>();
                     services.AddTransient<DaemonConnector>();
+                    services.AddSingleton<PeerVerifier>();
 
                     // Register jobs
                     services.AddTransient<DaemonsRecurringJob>();

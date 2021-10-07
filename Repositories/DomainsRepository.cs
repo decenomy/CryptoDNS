@@ -28,10 +28,8 @@ namespace CryptoDNS.Repositories
             this.appSettings = appSettings.Value;
         }
 
-        public void Add(string domain, string ip)
+        public void Add(string domain, IPAddress ip)
         {
-            if(!IPAddress.TryParse(ip, out var ipAddress)) return;
-
             var entry = new DomainEntry()
             {
                 Domain = domain,
@@ -58,6 +56,24 @@ namespace CryptoDNS.Repositories
             }
         }
 
+        public DomainEntry GetDomainEntry(string domain, IPAddress ip) {
+            
+            var entry = new DomainEntry()
+            {
+                Domain = domain,
+                IP = ip,
+            };
+
+            if (entries.ContainsKey(domain) &&
+                entries[domain].ContainsKey(entry.RecordType) &&
+                entries[domain][entry.RecordType].ContainsKey(entry.Id))
+            {
+                return entries[domain][entry.RecordType][entry.Id];
+            }
+
+            return null;
+        }
+
         public void Cleanup()
         {
             foreach (var domain in entries.Keys)
@@ -68,7 +84,7 @@ namespace CryptoDNS.Repositories
 
                     foreach (var entry in entries[domain][recordType].Values)
                     {
-                        if (entry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL))
+                        if (entry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL * 1.5))
                         {
                             toDelete.Add(entry.Id);
                         }

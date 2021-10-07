@@ -1,29 +1,40 @@
+using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
 using CryptoDNS.Connectors;
 using CryptoDNS.Models;
 using CryptoDNS.Repositories;
+using CryptoDNS.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CryptoDNS.Jobs
 {
     public class DaemonFetchPeersJob
     {
         private readonly ILogger<DaemonFetchPeersJob> logger;
+        private readonly AppSettings appSettings;
         private readonly DaemonConnector daemonConnector;
         private readonly DomainsRepository domainsRepository;
+        private readonly PeerVerifier peerVerifier;
 
         public DaemonFetchPeersJob(
             ILogger<DaemonFetchPeersJob> logger,
+            IOptions<AppSettings> appSettings,
             DaemonConnector daemonConnector,
-            DomainsRepository domainsRepository
+            DomainsRepository domainsRepository,
+            PeerVerifier peerVerifier
         )
         {
             this.logger = logger;
+            this.appSettings = appSettings.Value;
             this.daemonConnector = daemonConnector;
             this.domainsRepository = domainsRepository;
+            this.peerVerifier = peerVerifier;
         }
 
-        public void Execute(DomainSettings domain)
+        public async Task Execute(DomainSettings domain)
         {
             logger.LogInformation("DaemonFetchPeersJob Executing");
 
@@ -38,13 +49,23 @@ namespace CryptoDNS.Jobs
                 {
                     if (entry.IP.EndsWith(domain.Port.ToString()))
                     {
-                        domainsRepository.Add(
-                            domain.Domain,
-                            entry.IP.Substring(
+                        var ip = entry.IP.Substring(
                                 0,
                                 entry.IP.LastIndexOf(":")
-                            ).Replace("[", "").Replace("]", "")
-                        );
+                            ).Replace("[", "").Replace("]", "");
+
+                        if(!IPAddress.TryParse(ip, out var ipAddress)) continue;
+
+                        var domainEntry = domainsRepository.GetDomainEntry(domain.Domain, ipAddress);
+
+                        if(domainEntry == null || domainEntry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL)) {
+                            if(await peerVerifier.Verify(domain, ipAddress)) {
+                                domainsRepository.Add(
+                                    domain.Domain,
+                                    ipAddress
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -61,12 +82,16 @@ namespace CryptoDNS.Jobs
                 {
                     if (entry.Addr.EndsWith(domain.Port.ToString()))
                     {
-                        domainsRepository.Add(
-                            domain.Domain,
-                            entry.Addr.Substring(
+                        var ip = entry.Addr.Substring(
                                 0,
                                 entry.Addr.LastIndexOf(":")
-                            ).Replace("[", "").Replace("]", "")
+                            ).Replace("[", "").Replace("]", "");
+
+                        if(!IPAddress.TryParse(ip, out var ipAddress)) continue;
+
+                        domainsRepository.Add(
+                            domain.Domain,
+                            ipAddress
                         );
                     }
                 }

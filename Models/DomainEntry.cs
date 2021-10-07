@@ -9,18 +9,18 @@ namespace CryptoDNS.Models
     {
         public string Id => $"{Domain}_{IP}";
         public string Domain { get; set; }
-        public string IP { get; set; }
+        public IPAddress IP { get; set; }
         public DateTime LastSeen { get; set; } = DateTime.Now;
 
         public RecordType RecordType =>
-            IPAddress.Parse(this.IP).GetAddressBytes().Length == 4 ?
+            this.IP.GetAddressBytes().Length == 4 ?
             RecordType.A :
             RecordType.AAAA;
 
         public IPAddressResourceRecord ResourceRecord =>
             new IPAddressResourceRecord(
                 new Domain(this.Domain),
-                IPAddress.Parse(this.IP),
+                this.IP,
                 new TimeSpan(0)
             );
     }

@@ -41,7 +41,7 @@ namespace CryptoDNS.Services
 
                 var daemonsRecurringJob = serviceProvider.GetService<DaemonsRecurringJob>();
 
-                daemonsRecurringJob.Execute();
+                await daemonsRecurringJob.Execute();
 
                 if(stoppingToken.IsCancellationRequested) break;
 

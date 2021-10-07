@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Linq;
 using CryptoDNS.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
@@ -8,13 +9,13 @@ namespace CryptoDNS.Connectors
 {
     public class DaemonConnector
     {
-        private readonly AppSettings appSettings;
+        private readonly ILogger<DaemonConnector> logger;
 
         public DaemonConnector(
-            IOptions<AppSettings> appSettings
+            ILogger<DaemonConnector> logger
         )
         {
-            this.appSettings = appSettings.Value;
+            this.logger = logger;
         }
 
         public T ExecuteRpcCommand<T>(
@@ -22,6 +23,7 @@ namespace CryptoDNS.Connectors
             string command,
             params string[] arguments)
         {
+            logger.LogInformation($"ExecuteRpcCommand { command }({ string.Join(", ", arguments) }) Executing for { domainSettings.Domain }");
 
             var p = new Process
             {
@@ -39,7 +41,11 @@ namespace CryptoDNS.Connectors
 
             var response = p.StandardOutput.ReadToEnd();
 
-            return JsonConvert.DeserializeObject<T>(response);
+            var ret = JsonConvert.DeserializeObject<T>(response);
+
+            logger.LogInformation($"ExecuteRpcCommand { command }({ string.Join(", ", arguments) }) Executed for { domainSettings.Domain }");
+
+            return ret;
         }
     }
 }
