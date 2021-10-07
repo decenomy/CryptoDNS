@@ -89,10 +89,16 @@ namespace CryptoDNS.Jobs
 
                         if(!IPAddress.TryParse(ip, out var ipAddress)) continue;
 
-                        domainsRepository.Add(
-                            domain.Domain,
-                            ipAddress
-                        );
+                        var domainEntry = domainsRepository.GetDomainEntry(domain.Domain, ipAddress);
+
+                        if(domainEntry == null || domainEntry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL)) {
+                            if(await peerVerifier.Verify(domain, ipAddress)) {
+                                domainsRepository.Add(
+                                    domain.Domain,
+                                    ipAddress
+                                );
+                            }
+                        }
                     }
                 }
             }

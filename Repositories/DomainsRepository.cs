@@ -52,7 +52,7 @@ namespace CryptoDNS.Repositories
             }
             else
             {
-                entries[domain][entry.RecordType][entry.Id].LastSeen = entry.LastSeen;
+                entries[domain][entry.RecordType][entry.Id].LastSeen = DateTime.Now;
             }
         }
 
