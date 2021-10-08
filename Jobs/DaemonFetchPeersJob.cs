@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading.Tasks;
 using CryptoDNS.Connectors;
 using CryptoDNS.Models;
 using CryptoDNS.Repositories;
-using CryptoDNS.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,7 +28,7 @@ namespace CryptoDNS.Jobs
             this.domainsRepository = domainsRepository;
         }
 
-        public async Task Execute(DomainSettings domain)
+        public void Execute(DomainSettings domain)
         {
             logger.LogInformation("DaemonFetchPeersJob Executing");
 
@@ -53,7 +50,7 @@ namespace CryptoDNS.Jobs
 
                         if (!IPAddress.TryParse(ip, out var ipAddress)) continue;
 
-                        await domainsRepository.Add(
+                        domainsRepository.Add(
                             domain.Domain,
                             ipAddress
                         );
@@ -80,7 +77,7 @@ namespace CryptoDNS.Jobs
 
                         if (!IPAddress.TryParse(ip, out var ipAddress)) continue;
 
-                        await domainsRepository.Add(
+                        domainsRepository.Add(
                             domain.Domain,
                             ipAddress
                         );

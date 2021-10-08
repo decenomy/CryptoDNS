@@ -18,10 +18,10 @@ namespace CryptoDNS.Jobs
             this.domainsRepository = domainsRepository;
         }
 
-        public async Task Execute()
+        public void Execute()
         {
             logger.LogInformation("DomainsVerificationJob Executing");
-            await domainsRepository.Verify();
+            domainsRepository.Verify();
             logger.LogInformation("DomainsVerificationJob Executed");
         }
     }

@@ -50,11 +50,12 @@ namespace CryptoDNS.Services
 
                     var daemonsRecurringJob = serviceProvider.GetService<DaemonsRecurringJob>();
 
-                    await daemonsRecurringJob.Execute();
+                    daemonsRecurringJob.Execute();
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DaemonsRecurringJob.");
+                    logger.LogError(ex, ex.StackTrace);
                 }
 
                 try
@@ -68,6 +69,7 @@ namespace CryptoDNS.Services
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                    logger.LogError(ex, ex.StackTrace);
                 }
 
                 try
@@ -76,11 +78,12 @@ namespace CryptoDNS.Services
 
                     var domainsVerificationJob = serviceProvider.GetService<DomainsVerificationJob>();
 
-                    await domainsVerificationJob.Execute();
+                    domainsVerificationJob.Execute();
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsVerificationJob.");
+                    logger.LogError(ex, ex.StackTrace);
                 }
 
                 try
@@ -93,7 +96,8 @@ namespace CryptoDNS.Services
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the GCCollectJob.");
+                    logger.LogError(ex, ex.StackTrace);
                 }
 
                 if (stoppingToken.IsCancellationRequested) break;

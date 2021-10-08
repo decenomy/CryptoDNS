@@ -39,6 +39,7 @@ namespace CryptoDNS
                     services.AddTransient<DaemonsRecurringJob>();
                     services.AddTransient<DaemonFetchPeersJob>();
                     services.AddTransient<DomainsCleanupJob>();
+                    services.AddTransient<DomainsVerificationJob>();
                     services.AddTransient<GCCollectJob>();
 
                     // Register background services

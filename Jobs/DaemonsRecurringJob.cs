@@ -1,9 +1,9 @@
+using System.Threading.Tasks;
 using CryptoDNS.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 namespace CryptoDNS.Jobs
 {
@@ -24,16 +24,16 @@ namespace CryptoDNS.Jobs
             this.serviceProvider = serviceProvider;
         }
 
-        public async Task Execute()
+        public void Execute()
         {
             logger.LogInformation("DaemonsRecurringJob Executing");
 
             var daemonFetchPeersJob = serviceProvider.GetService<DaemonFetchPeersJob>();
 
-            foreach (var domain in appSettings.Domains)
-            {
-                await daemonFetchPeersJob.Execute(domain);
-            }
+            Parallel.ForEach(appSettings.Domains, domain => {
+                daemonFetchPeersJob.Execute(domain);
+            });
+
             logger.LogInformation("DaemonsRecurringJob Executed");
         }
     }
