@@ -43,7 +43,7 @@ The `sudo` command is needed to allow the binding of port 53
 To release the binaries for production compile and pack it with this command:
 
 ```
-$ dotnet publish -c Release
+$ dotnet publish /p:PublishProfile=Linux_x64
 ```
 
 For Windows or other architectures you need to specify the correct RID like described here:
