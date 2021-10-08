@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using CryptoDNS.Jobs;
@@ -10,6 +11,8 @@ namespace CryptoDNS.Services
 {
     public class SchedulerService : BackgroundService
     {
+        private const int SCHEDULER_INTERVAL = 60 * 1000;
+
         private readonly ILogger<SchedulerService> logger;
         private readonly IServiceProvider serviceProvider;
 
@@ -35,34 +38,76 @@ namespace CryptoDNS.Services
         {
             logger.LogInformation("Scheduler Service executing.");
 
+            var sw = new Stopwatch();
+
             while (true)
             {
-                if(stoppingToken.IsCancellationRequested) break;
+                sw.Start();
 
-                var daemonsRecurringJob = serviceProvider.GetService<DaemonsRecurringJob>();
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
 
-                await daemonsRecurringJob.Execute();
+                    var daemonsRecurringJob = serviceProvider.GetService<DaemonsRecurringJob>();
 
-                if(stoppingToken.IsCancellationRequested) break;
+                    await daemonsRecurringJob.Execute();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DaemonsRecurringJob.");
+                }
 
-                var domainsCleanupJob = serviceProvider.GetService<DomainsCleanupJob>();
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
 
-                domainsCleanupJob.Execute();
+                    var domainsCleanupJob = serviceProvider.GetService<DomainsCleanupJob>();
 
-                if(stoppingToken.IsCancellationRequested) break;
+                    domainsCleanupJob.Execute();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                }
 
-                var gcCollectJob = serviceProvider.GetService<GCCollectJob>();
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
 
-                gcCollectJob.Execute();
+                    var domainsVerificationJob = serviceProvider.GetService<DomainsVerificationJob>();
 
-                if(stoppingToken.IsCancellationRequested) break;
+                    await domainsVerificationJob.Execute();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                }
 
-                await Task.Delay(60 * 1000, stoppingToken);
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
+
+                    var gcCollectJob = serviceProvider.GetService<GCCollectJob>();
+
+                    gcCollectJob.Execute();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
+                }
+
+                if (stoppingToken.IsCancellationRequested) break;
+
+                sw.Stop();
+
+                if(sw.ElapsedMilliseconds < SCHEDULER_INTERVAL) {
+                    await Task.Delay((int)(SCHEDULER_INTERVAL - sw.ElapsedMilliseconds), stoppingToken);
+                }
+
+                sw.Reset();
             }
 
             logger.LogInformation("Scheduler Service executed.");
-
-            await Task.CompletedTask;
         }
 
         public override async Task StopAsync(CancellationToken stoppingToken)

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Linq;
 using CryptoDNS.Models;
 using DNS.Protocol;
@@ -8,6 +7,9 @@ using DNS.Protocol.ResourceRecords;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Collections.Concurrent;
+using CryptoDNS.Services;
+using System.Threading.Tasks;
 
 namespace CryptoDNS.Repositories
 {
@@ -15,31 +17,42 @@ namespace CryptoDNS.Repositories
     {
         private readonly ILogger<DomainsRepository> logger;
         private readonly AppSettings appSettings;
+        private readonly PeerVerifier peerVerifier;
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<RecordType, ConcurrentDictionary<string, DomainEntry>>> entries =
             new ConcurrentDictionary<string, ConcurrentDictionary<RecordType, ConcurrentDictionary<string, DomainEntry>>>();
 
+        private readonly Dictionary<string, DomainSettings> domains;
+
         public DomainsRepository(
             ILogger<DomainsRepository> logger,
-            IOptions<AppSettings> appSettings
+            IOptions<AppSettings> appSettings,
+            PeerVerifier peerVerifier 
         )
         {
             this.logger = logger;
             this.appSettings = appSettings.Value;
+            this.peerVerifier = peerVerifier;
+
+            domains = new Dictionary<string, DomainSettings>(
+                this.appSettings.Domains.ToDictionary(d => d.Domain)
+            );
         }
 
-        public void Add(string domain, IPAddress ip)
+        public async Task Add(string domain, IPAddress ip)
         {
-            var entry = new DomainEntry()
-            {
-                Domain = domain,
-                IP = ip,
-            };
+            if(!domains.ContainsKey(domain)) return;
 
             if (!entries.ContainsKey(domain))
             {
                 entries[domain] = new ConcurrentDictionary<RecordType, ConcurrentDictionary<string, DomainEntry>>();
             }
+
+            var entry = new DomainEntry()
+            {
+                Domain = domain,
+                IP = ip,
+            };
 
             if (!entries[domain].ContainsKey(entry.RecordType))
             {
@@ -48,30 +61,12 @@ namespace CryptoDNS.Repositories
 
             if (!entries[domain][entry.RecordType].ContainsKey(entry.Id))
             {
+                entry.Online = await peerVerifier.Verify(domains[domain], ip);
+                entry.LastSeen = DateTime.Now;
+                entry.LastVerified = entry.LastSeen;
+                
                 entries[domain][entry.RecordType][entry.Id] = entry;
             }
-            else
-            {
-                entries[domain][entry.RecordType][entry.Id].LastSeen = DateTime.Now;
-            }
-        }
-
-        public DomainEntry GetDomainEntry(string domain, IPAddress ip) {
-            
-            var entry = new DomainEntry()
-            {
-                Domain = domain,
-                IP = ip,
-            };
-
-            if (entries.ContainsKey(domain) &&
-                entries[domain].ContainsKey(entry.RecordType) &&
-                entries[domain][entry.RecordType].ContainsKey(entry.Id))
-            {
-                return entries[domain][entry.RecordType][entry.Id];
-            }
-
-            return null;
         }
 
         public void Cleanup()
@@ -84,7 +79,7 @@ namespace CryptoDNS.Repositories
 
                     foreach (var entry in entries[domain][recordType].Values)
                     {
-                        if (entry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL * 1.5))
+                        if (entry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL))
                         {
                             toDelete.Add(entry.Id);
                         }
@@ -93,6 +88,27 @@ namespace CryptoDNS.Repositories
                     foreach (var entryId in toDelete)
                     {
                         ((IDictionary<string, DomainEntry>)entries[domain][recordType]).Remove(entryId);
+                    }
+                }
+            }
+        }
+
+        public async Task Verify()
+        {
+            foreach (var domain in entries.Keys)
+            {
+                foreach (var recordType in entries[domain].Keys)
+                {
+                    foreach (var entry in entries[domain][recordType].Values)
+                    {
+                        if (entry.LastVerified < DateTime.Now.AddSeconds(-appSettings.VerifyInterval))
+                        {
+                            entry.Online = await peerVerifier.Verify(domains[domain], entry.IP);
+                            if(entry.Online) {
+                                entry.LastSeen = DateTime.Now;
+                            }
+                            entry.LastVerified = entry.LastSeen;
+                        }
                     }
                 }
             }
@@ -112,6 +128,7 @@ namespace CryptoDNS.Repositories
 
             return
                 entries[domain][recordType].Values.
+                    Where(d => d.Online).
                     OrderBy(d => Guid.NewGuid()).
                     Take(appSettings.NumberOfAnswers).
                     Select(d => d.ResourceRecord);

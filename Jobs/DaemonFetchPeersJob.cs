@@ -17,21 +17,18 @@ namespace CryptoDNS.Jobs
         private readonly AppSettings appSettings;
         private readonly DaemonConnector daemonConnector;
         private readonly DomainsRepository domainsRepository;
-        private readonly PeerVerifier peerVerifier;
 
         public DaemonFetchPeersJob(
             ILogger<DaemonFetchPeersJob> logger,
             IOptions<AppSettings> appSettings,
             DaemonConnector daemonConnector,
-            DomainsRepository domainsRepository,
-            PeerVerifier peerVerifier
+            DomainsRepository domainsRepository
         )
         {
             this.logger = logger;
             this.appSettings = appSettings.Value;
             this.daemonConnector = daemonConnector;
             this.domainsRepository = domainsRepository;
-            this.peerVerifier = peerVerifier;
         }
 
         public async Task Execute(DomainSettings domain)
@@ -54,18 +51,12 @@ namespace CryptoDNS.Jobs
                                 entry.IP.LastIndexOf(":")
                             ).Replace("[", "").Replace("]", "");
 
-                        if(!IPAddress.TryParse(ip, out var ipAddress)) continue;
+                        if (!IPAddress.TryParse(ip, out var ipAddress)) continue;
 
-                        var domainEntry = domainsRepository.GetDomainEntry(domain.Domain, ipAddress);
-
-                        if(domainEntry == null || domainEntry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL)) {
-                            if(await peerVerifier.Verify(domain, ipAddress)) {
-                                domainsRepository.Add(
-                                    domain.Domain,
-                                    ipAddress
-                                );
-                            }
-                        }
+                        await domainsRepository.Add(
+                            domain.Domain,
+                            ipAddress
+                        );
                     }
                 }
             }
@@ -87,18 +78,12 @@ namespace CryptoDNS.Jobs
                                 entry.Addr.LastIndexOf(":")
                             ).Replace("[", "").Replace("]", "");
 
-                        if(!IPAddress.TryParse(ip, out var ipAddress)) continue;
+                        if (!IPAddress.TryParse(ip, out var ipAddress)) continue;
 
-                        var domainEntry = domainsRepository.GetDomainEntry(domain.Domain, ipAddress);
-
-                        if(domainEntry == null || domainEntry.LastSeen < DateTime.Now.AddSeconds(-appSettings.TTL)) {
-                            if(await peerVerifier.Verify(domain, ipAddress)) {
-                                domainsRepository.Add(
-                                    domain.Domain,
-                                    ipAddress
-                                );
-                            }
-                        }
+                        await domainsRepository.Add(
+                            domain.Domain,
+                            ipAddress
+                        );
                     }
                 }
             }
