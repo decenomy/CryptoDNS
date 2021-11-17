@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,6 +67,8 @@ namespace CryptoDNS.Services
             await base.StopAsync(stoppingToken);
 
             logger.LogInformation("DNS Service stopped.");
+
+            Environment.Exit(-1);
         }
 
         public override void Dispose()
