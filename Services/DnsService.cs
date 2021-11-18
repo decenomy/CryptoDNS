@@ -31,20 +31,30 @@ namespace CryptoDNS.Services
 
         public override async Task StartAsync(CancellationToken stoppingToken)
         {
-            try
+            logger.LogInformation("DNS Service starting.");
+
+            
+
+            dnsServer = new DnsServer(resolver, "8.8.8.8");
+
+            dnsServer.Requested += (sender, e) => logger.LogTrace("DNS Service requested: {0}", e.Request);
+            dnsServer.Responded += (sender, e) => logger.LogTrace("DNS Service replied: {0} => {1}", e.Request, e.Response);
+            dnsServer.Listening += (sender, e) => logger.LogInformation("DNS Service listening");
+            dnsServer.Errored += (sender, e) => logger.LogError(e.Exception, "DNS Service an error as occurred: {0}", e.Exception.Message);
+
+            await base.StartAsync(stoppingToken);
+
+            logger.LogInformation("DNS Service started.");
+            
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            logger.LogInformation("DNS Service executing.");
+
+            try 
             {
-                logger.LogInformation("DNS Service starting.");
-
-                dnsServer = new DnsServer(resolver, "8.8.8.8");
-
-                dnsServer.Requested += (sender, e) => logger.LogTrace("DNS Service requested: {0}", e.Request);
-                dnsServer.Responded += (sender, e) => logger.LogTrace("DNS Service replied: {0} => {1}", e.Request, e.Response);
-                dnsServer.Listening += (sender, e) => logger.LogInformation("DNS Service listening");
-                dnsServer.Errored += (sender, e) => logger.LogError(e.Exception, "DNS Service an error as occurred: {0}", e.Exception.Message);
-
-                await base.StartAsync(stoppingToken);
-
-                logger.LogInformation("DNS Service started.");
+                await dnsServer.Listen(ip: IPAddress.Parse(appSettings.ListenIP));
             }
             catch
             {
@@ -52,13 +62,6 @@ namespace CryptoDNS.Services
 
                 throw;
             }
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            logger.LogInformation("DNS Service executing.");
-
-            await dnsServer.Listen(ip: IPAddress.Parse(appSettings.ListenIP));
 
             logger.LogInformation("DNS Service executed.");
         }
