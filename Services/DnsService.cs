@@ -79,6 +79,8 @@ namespace CryptoDNS.Services
             await base.StopAsync(stoppingToken);
 
             logger.LogInformation("DNS Service stopped.");
+
+            Environment.Exit(-1);
         }
 
         public override void Dispose()
@@ -94,6 +96,8 @@ namespace CryptoDNS.Services
             logger.LogInformation("DNS Service disposed.");
 
             base.Dispose();
+
+            Environment.Exit(-1);
         }
     }
 }
