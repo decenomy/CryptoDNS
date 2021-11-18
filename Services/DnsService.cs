@@ -31,18 +31,25 @@ namespace CryptoDNS.Services
 
         public override async Task StartAsync(CancellationToken stoppingToken)
         {
-            logger.LogInformation("DNS Service starting.");
+            try
+            {
+                logger.LogInformation("DNS Service starting.");
 
-            dnsServer = new DnsServer(resolver, "8.8.8.8");
+                dnsServer = new DnsServer(resolver, "8.8.8.8");
 
-            dnsServer.Requested += (sender, e) => logger.LogTrace("DNS Service requested: {0}", e.Request);
-            dnsServer.Responded += (sender, e) => logger.LogTrace("DNS Service replied: {0} => {1}", e.Request, e.Response);
-            dnsServer.Listening += (sender, e) => logger.LogInformation("DNS Service listening");
-            dnsServer.Errored += (sender, e) => logger.LogError(e.Exception, "DNS Service an error as occurred: {0}", e.Exception.Message);
+                dnsServer.Requested += (sender, e) => logger.LogTrace("DNS Service requested: {0}", e.Request);
+                dnsServer.Responded += (sender, e) => logger.LogTrace("DNS Service replied: {0} => {1}", e.Request, e.Response);
+                dnsServer.Listening += (sender, e) => logger.LogInformation("DNS Service listening");
+                dnsServer.Errored += (sender, e) => logger.LogError(e.Exception, "DNS Service an error as occurred: {0}", e.Exception.Message);
 
-            await base.StartAsync(stoppingToken);
+                await base.StartAsync(stoppingToken);
 
-            logger.LogInformation("DNS Service started.");
+                logger.LogInformation("DNS Service started.");
+            }
+            catch
+            {
+                Environment.Exit(-1);
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,8 +74,6 @@ namespace CryptoDNS.Services
             await base.StopAsync(stoppingToken);
 
             logger.LogInformation("DNS Service stopped.");
-
-            Environment.Exit(-1);
         }
 
         public override void Dispose()
