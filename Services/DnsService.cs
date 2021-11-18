@@ -49,6 +49,8 @@ namespace CryptoDNS.Services
             catch
             {
                 Environment.Exit(-1);
+
+                throw;
             }
         }
 
