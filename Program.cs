@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CryptoDNS.Connectors;
 using CryptoDNS.Jobs;
 using CryptoDNS.Models;
@@ -16,10 +17,7 @@ namespace CryptoDNS
     {
         private static AppSettings appSettings = new AppSettings();
 
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
+        public static void Main(string[] args) => CreateHostBuilder(args).Build().Run();
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
@@ -48,6 +46,6 @@ namespace CryptoDNS
 
                     // Register the service provider as the last registration operation
                     services.AddSingleton<IServiceProvider>(sp => sp);
-                });
+                }).UseConsoleLifetime();
     }
 }

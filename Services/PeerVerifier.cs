@@ -28,9 +28,16 @@ namespace CryptoDNS.Services
                 using (var client = new TcpClient()) {
 
                     await client.ConnectAsync(ip, port); // just try to connect and free the connection immediately
-                    client.Close(); 
 
-                    return true;
+                    var stream = client.GetStream();
+
+                    await stream.WriteAsync(new byte[4] { 0xf9, 0xbe, 0xb4, 0xd9 }, 0, 4);
+
+                    var ret = client.Connected;
+
+                    client.Close();
+
+                    return ret;
                 }
             }
             catch
