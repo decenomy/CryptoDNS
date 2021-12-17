@@ -33,9 +33,7 @@ namespace CryptoDNS.Services
         {
             logger.LogInformation("DNS Service starting.");
 
-            
-
-            dnsServer = new DnsServer(resolver, "8.8.8.8");
+            dnsServer = new DnsServer(resolver);
 
             dnsServer.Requested += (sender, e) => logger.LogTrace("DNS Service requested: {0}", e.Request);
             dnsServer.Responded += (sender, e) => logger.LogTrace("DNS Service replied: {0} => {1}", e.Request, e.Response);
@@ -52,16 +50,7 @@ namespace CryptoDNS.Services
         {
             logger.LogInformation("DNS Service executing.");
 
-            try 
-            {
-                await dnsServer.Listen(ip: IPAddress.Parse(appSettings.ListenIP));
-            }
-            catch
-            {
-                Environment.Exit(-1);
-
-                throw;
-            }
+            await dnsServer.Listen(ip: IPAddress.Parse(appSettings.ListenIP));
 
             logger.LogInformation("DNS Service executed.");
         }
@@ -79,8 +68,6 @@ namespace CryptoDNS.Services
             await base.StopAsync(stoppingToken);
 
             logger.LogInformation("DNS Service stopped.");
-
-            Environment.Exit(-1);
         }
 
         public override void Dispose()
@@ -96,8 +83,6 @@ namespace CryptoDNS.Services
             logger.LogInformation("DNS Service disposed.");
 
             base.Dispose();
-
-            Environment.Exit(-1);
         }
     }
 }

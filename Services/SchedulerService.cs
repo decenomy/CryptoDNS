@@ -50,11 +50,25 @@ namespace CryptoDNS.Services
 
                     var daemonsRecurringJob = serviceProvider.GetService<DaemonsRecurringJob>();
 
-                    daemonsRecurringJob.Execute();
+                    await daemonsRecurringJob.Execute(stoppingToken);
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DaemonsRecurringJob.");
+                    logger.LogError(ex, ex.StackTrace);
+                }
+
+                try
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
+
+                    var domainsVerificationJob = serviceProvider.GetService<DomainsVerificationJob>();
+
+                    await domainsVerificationJob.Execute(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsVerificationJob.");
                     logger.LogError(ex, ex.StackTrace);
                 }
 
@@ -69,20 +83,6 @@ namespace CryptoDNS.Services
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsCleanupJob.");
-                    logger.LogError(ex, ex.StackTrace);
-                }
-
-                try
-                {
-                    if (stoppingToken.IsCancellationRequested) break;
-
-                    var domainsVerificationJob = serviceProvider.GetService<DomainsVerificationJob>();
-
-                    domainsVerificationJob.Execute();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Scheduler Service: an error as ocurred executing the DomainsVerificationJob.");
                     logger.LogError(ex, ex.StackTrace);
                 }
 

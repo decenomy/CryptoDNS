@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using CryptoDNS.Repositories;
 using Microsoft.Extensions.Logging;
@@ -18,10 +19,10 @@ namespace CryptoDNS.Jobs
             this.domainsRepository = domainsRepository;
         }
 
-        public void Execute()
+        public async Task Execute(CancellationToken cancellationToken)
         {
             logger.LogInformation("DomainsVerificationJob Executing");
-            domainsRepository.Verify();
+            await domainsRepository.Verify(cancellationToken);
             logger.LogInformation("DomainsVerificationJob Executed");
         }
     }

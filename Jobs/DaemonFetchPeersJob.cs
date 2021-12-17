@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using CryptoDNS.Connectors;
 using CryptoDNS.Models;
 using CryptoDNS.Repositories;
@@ -28,14 +30,14 @@ namespace CryptoDNS.Jobs
             this.domainsRepository = domainsRepository;
         }
 
-        public void Execute(DomainSettings domain)
+        public async Task Execute(DomainSettings domain, CancellationToken cancellationToken)
         {
             logger.LogInformation("DaemonFetchPeersJob Executing");
 
             logger.LogInformation("DaemonFetchPeersJob fetching masternodes");
-            var masternodes =
+            var masternodes = await
                 daemonConnector.ExecuteRpcCommand<List<MasternodeEntry>>(
-                    domain, "listmasternodes");
+                    domain, cancellationToken, "listmasternodes");
 
             if (masternodes != null && masternodes.Count > 0)
             {
@@ -60,9 +62,9 @@ namespace CryptoDNS.Jobs
 
             logger.LogInformation("DaemonFetchPeersJob fetching peers");
 
-            var peers =
+            var peers = await
                 daemonConnector.ExecuteRpcCommand<List<PeerEntry>>(
-                    domain, "getpeerinfo");
+                    domain, cancellationToken, "getpeerinfo");
 
             if (peers != null && peers.Count > 0)
             {

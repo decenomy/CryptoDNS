@@ -10,6 +10,7 @@ using System.Net;
 using System.Collections.Concurrent;
 using CryptoDNS.Services;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace CryptoDNS.Repositories
 {
@@ -18,6 +19,8 @@ namespace CryptoDNS.Repositories
         private readonly ILogger<DomainsRepository> logger;
         private readonly AppSettings appSettings;
         private readonly PeerVerifier peerVerifier;
+        
+        private bool firstTime = true; 
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<RecordType, ConcurrentDictionary<string, DomainEntry>>> entries =
             new ConcurrentDictionary<string, ConcurrentDictionary<RecordType, ConcurrentDictionary<string, DomainEntry>>>();
@@ -89,29 +92,30 @@ namespace CryptoDNS.Repositories
             }
         }
 
-        public void Verify()
+        public async Task Verify(CancellationToken cancellationToken)
         {
-            Parallel.ForEach(entries.Keys, domain =>
-            {
-                Parallel.ForEach(entries[domain].Keys, recordType =>
+            var toVerify = 
+                (from domain in entries.Keys
+                 from recordType in entries[domain].Keys
+                 from entry in entries[domain][recordType].Values
+                 where entry.LastVerified < DateTime.Now.AddSeconds(-appSettings.VerifyInterval)
+                 orderby entry.LastVerified 
+                 select entry);
+
+            toVerify = toVerify.Take(firstTime ? int.MaxValue : 10);
+
+            var tasks = toVerify.Select(async entry => {
+                entry.Online = await peerVerifier.Verify(entry.IP, domains[entry.Domain].Port, cancellationToken);
+                if (entry.Online)
                 {
-                    Parallel.ForEach(
-                        entries[domain][recordType].Values.
-                            Where(e => e.LastVerified < DateTime.Now.AddSeconds(-appSettings.VerifyInterval)).
-                            OrderBy(e => Guid.NewGuid()).
-                            Take(10),
-                        async (entry) =>
-                        {
-                            entry.Online = await peerVerifier.Verify(domains[domain], entry.IP);
-                            if (entry.Online)
-                            {
-                                entry.LastSeen = DateTime.Now;
-                            }
-                            entry.LastVerified = DateTime.Now;
-                        }
-                    );
-                });
+                    entry.LastSeen = DateTime.Now;
+                }
+                entry.LastVerified = DateTime.Now;
             });
+
+            await Task.WhenAll(tasks);
+
+            firstTime = false;
         }
 
         public IEnumerable<IResourceRecord> GetResourceRecords(string domain, RecordType recordType)
@@ -129,6 +133,8 @@ namespace CryptoDNS.Repositories
             return
                 entries[domain][recordType].Values.
                     Where(e => e.Online).
+                    OrderByDescending(e => e.LastSeen).
+                    Take(appSettings.NumberOfAnswers * 4).
                     OrderBy(e => Guid.NewGuid()).
                     Take(appSettings.NumberOfAnswers).
                     Select(e => e.ResourceRecord);

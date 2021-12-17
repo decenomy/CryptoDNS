@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CryptoDNS.Models;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace CryptoDNS.Services
 {
@@ -15,27 +16,49 @@ namespace CryptoDNS.Services
 
         public PeerVerifier(
             ILogger<PeerVerifier> logger
-        ) {
+        )
+        {
             this.logger = logger;
         }
 
-        public async Task<bool> Verify(DomainSettings domainSettings, IPAddress ip)
+        public async Task<bool> Verify(IPAddress ip, int port, CancellationToken cancellationToken)
         {
-            var port = domainSettings.Port;
-
             try
             {
-                using (var client = new TcpClient()) {
+                using (var client = new TcpClient())
+                {
+                    await client.ConnectAsync(ip, port, cancellationToken);
 
-                    await client.ConnectAsync(ip, port); // just try to connect and free the connection immediately
+                    using var stream = client.GetStream();
 
-                    var stream = client.GetStream();
+                    var rnd = new Random((int)DateTime.Now.Ticks);
 
-                    await stream.WriteAsync(new byte[4] { 0xf9, 0xbe, 0xb4, 0xd9 }, 0, 4);
+                    await stream.WriteAsync(Enumerable.Range(0, 4).Select(_ => (byte)rnd.Next()).ToArray(), 0, 4, cancellationToken);
+                    await stream.FlushAsync(cancellationToken);
 
-                    var ret = client.Connected;
+                    var ret = false;
 
-                    client.Close();
+                    try
+                    {
+                        if(client != null && client.Client != null) 
+                        {
+                            if(!(client.Client.Poll(100000, SelectMode.SelectRead) && client.Client.Available == 0)) 
+                            {
+                                ret = true;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, ex.Message);
+                    }
+                    finally
+                    {
+                        client.Close();
+                    }
+
+                    if(ret) logger.LogInformation($"Connection to host { ip }:{ port } is { (ret ? "OK" : "KO") }");
+                    logger.LogTrace($"Connection to host { ip }:{ port } is { (ret ? "OK" : "KO") }");
 
                     return ret;
                 }

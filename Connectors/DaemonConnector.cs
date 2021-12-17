@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CryptoDNS.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,10 +20,12 @@ namespace CryptoDNS.Connectors
             this.logger = logger;
         }
 
-        public T ExecuteRpcCommand<T>(
+        public async Task<T> ExecuteRpcCommand<T>(
             DomainSettings domainSettings,
+            CancellationToken cancellationToken,
             string command,
-            params string[] arguments)
+            params string[] arguments
+        )
         {
             logger.LogInformation($"ExecuteRpcCommand { command }({ string.Join(", ", arguments) }) Executing for { domainSettings.Domain }");
 
@@ -33,13 +37,13 @@ namespace CryptoDNS.Connectors
                     Arguments = string.Join(" ", new string[] { command }.Concat(arguments)),
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
                 }
             };
 
-            p.Start();
+            if(!p.Start()) return default(T);
 
-            var response = p.StandardOutput.ReadToEnd();
+            var response = await p.StandardOutput.ReadToEndAsync();
 
             var ret = JsonConvert.DeserializeObject<T>(response);
 
