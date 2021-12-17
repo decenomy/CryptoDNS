@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using CryptoDNS.Services;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Net.Sockets;
 
 namespace CryptoDNS.Repositories
 {
@@ -102,7 +103,13 @@ namespace CryptoDNS.Repositories
                  orderby entry.LastVerified 
                  select entry);
 
-            toVerify = toVerify.Take(firstTime ? int.MaxValue : 10);
+            toVerify = toVerify.
+                Where(e => e.IP.AddressFamily == AddressFamily.InterNetwork).
+                Take(firstTime ? int.MaxValue : 10).Concat(
+                    toVerify.
+                    Where(e => e.IP.AddressFamily == AddressFamily.InterNetworkV6).
+                    Take(firstTime ? int.MaxValue : 10)
+                );
 
             var tasks = toVerify.Select(async entry => {
                 entry.Online = await peerVerifier.Verify(entry.IP, domains[entry.Domain].Port, cancellationToken);
@@ -133,8 +140,6 @@ namespace CryptoDNS.Repositories
             return
                 entries[domain][recordType].Values.
                     Where(e => e.Online).
-                    OrderByDescending(e => e.LastSeen).
-                    Take(appSettings.NumberOfAnswers * 4).
                     OrderBy(e => Guid.NewGuid()).
                     Take(appSettings.NumberOfAnswers).
                     Select(e => e.ResourceRecord);
